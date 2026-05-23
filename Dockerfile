@@ -1,6 +1,6 @@
 
 # State 1: Build the application
-FROM node:20 as build
+FROM node:20 AS build
 
 WORKDIR /app
 
