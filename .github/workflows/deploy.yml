@@ -18,12 +18,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      # Thêm step kết nối VPN/Tailscale nếu laptop ở trong mạng nội bộ
-      # - name: Connect to Tailscale
-      #   uses: tailscale/github-action@v2
-      #   with:
-      #     oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-      #     oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9 # Chọn version pnpm bạn đang dùng (VD: 8 hoặc 9)
 
       - name: Copy Source Code to Ubuntu Server
         uses: appleboy/scp-action@v0.1.7

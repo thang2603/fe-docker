@@ -13,6 +13,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9 # Chọn version pnpm bạn đang dùng (VD: 8 hoặc 9)
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
