@@ -2,7 +2,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 # Bật pnpm có sẵn trong Node.js qua corepack
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.20.0 --activate
 
 # Copy file cấu hình dependency
 COPY package.json pnpm-lock.yaml ./
