@@ -59,7 +59,7 @@ jobs:
               PORT=8080
             fi
             echo "=== 1. Build Docker Image ($IMAGE_NAME) ==="
-            docker build -t $IMAGE_NAME .
+            docker build --build-arg ENV_MODE=$ENV_NAME -t $IMAGE_NAME .
             echo "=== 2. Dừng và Xóa Container cũ (nếu tồn tại) ==="
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
