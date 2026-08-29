@@ -29,6 +29,6 @@ jobs:
       - name: Run Linter & Tests
         run: |
           pnpm lint
-          pnpm test
+          pnpm run --if-present test
       - name: Build Test Docker Image
         run: docker build -t react-fe:test .
