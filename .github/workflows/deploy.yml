@@ -1,27 +1,31 @@
-name: Deploy React App to Ubuntu Server
+name: Deploy to Server
 on:
-  push:
-    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Select the environment to deploy to"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
 jobs:
   deploy:
+    name: Deploy React App to Server
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
+      # Thêm step kết nối VPN/Tailscale nếu laptop ở trong mạng nội bộ
+      # - name: Connect to Tailscale
+      #   uses: tailscale/github-action@v2
+      #   with:
+      #     oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+      #     oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
 
-      - name: Set up SSH & Deploy to Ubuntu
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SERVER_PORT }}
-          script: |
-            # Tạo thư mục app nếu chưa có
-            mkdir -p ~/react-app
-            cd ~/react-app
-
-      - name: Copy source code qua SSH
+      - name: Copy Source Code to Ubuntu Server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -29,27 +33,43 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           source: "."
-          target: "~/react-app"
+          target: "~/apps/react-fe-${{ inputs.environment }}"
 
-      - name: Build & Run Docker Container trên Server
+      # 2. Thực thi lệnh SSH trên Ubuntu Server để Build & Run Docker Container
+      - name: Build & Run Docker Container via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          ENV_NAME: ${{ inputs.environment }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SERVER_PORT }}
+          envs: ENV_NAME
           script: |
-            cd ~/react-app
-            # Build Docker image trực tiếp trên Ubuntu
-            docker build -t react-fe:latest .
+            # Chuyển vào thư mục chứa source code
+            cd ~/apps/react-fe-$ENV_NAME
 
-            # Dừng và xóa container cũ nếu đang chạy
-            docker stop react-fe-container || true
-            docker rm react-fe-container || true
+            # Thiết lập Tên Container & Port chạy ứng dụng theo Môi trường
+            CONTAINER_NAME="react-fe-$ENV_NAME"
+            IMAGE_NAME="react-fe:$ENV_NAME"
+            if [ "$ENV_NAME" = "production" ]; then
+              PORT=80
+            else
+              PORT=8080
+            fi
+            echo "=== 1. Build Docker Image ($IMAGE_NAME) ==="
+            docker build -t $IMAGE_NAME .
+            echo "=== 2. Dừng và Xóa Container cũ (nếu tồn tại) ==="
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
 
-            # Chạy container mới trên cổng 8080 của Ubuntu
+            echo "=== 3. Chạy Container mới trên Port $PORT ==="
             docker run -d \
-              --name react-fe-container \
+              --name $CONTAINER_NAME \
               --restart always \
-              -p 8080:80 \
-              react-fe:latest
+              -p $PORT:80 \
+              $IMAGE_NAME
+
+            echo "=== 4. Dọn dẹp Docker Images rác/cũ ==="
+            docker image prune -f
